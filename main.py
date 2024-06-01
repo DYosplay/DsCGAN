@@ -25,8 +25,8 @@ dtwc = dtw.DTW(True, normalize=False, bandwidth=1)
 sdtw = soft_dtw.SoftDTW(True, gamma=5, normalize=False, bandwidth=0.1)
 sdtw_eval = soft_dtw.SoftDTW(True, gamma=5, normalize=False, bandwidth=1)
 # dataset_folder = os.path.join("..","Resultados", "ROT_X2_", "ROT_X2_005", "generated_features")
-dataset_folder = os.path.join("..","OVS","Investigation","Extracted Features", "Evaluation")
-# dataset_folder = os.path.join("..","OnlineSignatureVerification","Investigation","Extracted Features", "Evaluation")
+# dataset_folder = os.path.join("..","OVS","Investigation","Extracted Features", "Evaluation")
+dataset_folder = os.path.join("..","OnlineSignatureVerification","Investigation","Extracted Features", "Evaluation")
 # dataset_folder = os.path.join("ROT_X2_", "ROT_X2_005", "generated_features")
 training_guide = "training_guide.txt"
 
@@ -452,7 +452,7 @@ for e in tqdm(range(opt.epochs)):
 
         # train with skilled forgeries
         # forgeries = forgeries.to(device)
-        batch_size, seq_len = forgeries.size(0), forgeries.size(1)
+        # batch_size, seq_len = forgeries.size(0), forgeries.size(1)
 
         # output_forgeries = netD(forgeries)
         # errD_forgeries = discriminator_loss(output_real, output_forgeries)
@@ -490,9 +490,9 @@ for e in tqdm(range(opt.epochs)):
         output_fake = netD(output_fake)
         output_real2 = netD(real[0].unsqueeze(0))
         
-        errG = discriminator_loss(output_real2, output_fake)
+        # errG = discriminator_loss(output_real2, output_fake)
+        errG = discriminator_loss(torch.cat((output_real2, output_fake), dim=0), torch.tensor([]))
         gen_loss.append(errG.item())
-        # errG = discriminator_loss(torch.cat((output_real[0].unsqueeze(0), output), dim=0), torch.tensor([]))
         errG.backward()
         D_G_z2 = output.mean().item()
         i+=1
