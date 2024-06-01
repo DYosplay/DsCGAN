@@ -25,7 +25,8 @@ dtwc = dtw.DTW(True, normalize=False, bandwidth=1)
 sdtw = soft_dtw.SoftDTW(True, gamma=5, normalize=False, bandwidth=0.1)
 sdtw_eval = soft_dtw.SoftDTW(True, gamma=5, normalize=False, bandwidth=1)
 # dataset_folder = os.path.join("..","Resultados", "ROT_X2_", "ROT_X2_005", "generated_features")
-dataset_folder = os.path.join("..","OnlineSignatureVerification","Investigation","Extracted Features", "Evaluation")
+dataset_folder = os.path.join("..","OVS","Investigation","Extracted Features", "Evaluation")
+# dataset_folder = os.path.join("..","OnlineSignatureVerification","Investigation","Extracted Features", "Evaluation")
 # dataset_folder = os.path.join("ROT_X2_", "ROT_X2_005", "generated_features")
 training_guide = "training_guide.txt"
 
@@ -123,13 +124,13 @@ def inference(files : str, gen, features_path : str):
         for i in range(0,len(refs)):
             x = load_tensor(refs[i].split('.')[0] + '.pt', features_path).cuda()
 
-            # noise = torch.randn(opt.batchSize, seq_len, nz, device=device)
-            # deltas = ref.repeat(opt.batchSize,1,1)
-            # noise = torch.cat((noise, deltas), dim=2)
+            noise = torch.randn(opt.batchSize, seq_len, nz, device=device)
+            deltas = ref.repeat(opt.batchSize,1,1)
+            noise = torch.cat((noise, deltas), dim=2)
 
-            # #Generate sequence given noise w/ deltas and deltas
-            # out_seqs = netG(noise)
-            # x = out_seqs[0]
+            #Generate sequence given noise w/ deltas and deltas
+            out_seqs = netG(noise)
+            x = out_seqs[0]
 
             dists_query.append(dtr_eval(x, query, x.shape[0], query.shape[0]).detach().cpu())
 
@@ -231,8 +232,8 @@ def evaluate(comparison_file : str, n_epoch : int, result_folder : str, features
     return ret_metrics
 
 def get_epoch():
-    references = ['u0001_g_0000v08.pt','u0002_g_0001v14.pt','u0003_g_0002v17.pt','u0004_g_0003v09.pt','u0005_g_0004v16.pt','u0006_g_0005v14.pt','u0007_g_0006v10.pt','u0008_g_0007v11.pt','u0009_g_0008v23.pt','u0010_g_0009v14.pt','u0011_g_0010v07.pt','u0012_g_0011v14.pt','u0013_g_0012v07.pt','u0014_g_0013v01.pt','u0015_g_0014v08.pt','u0016_g_0015v15.pt','u0017_g_0016v08.pt','u0018_g_0017v08.pt','u0019_g_0018v01.pt','u0020_g_0019v08.pt','u0021_g_0020v08.pt']
-    # references = ['u0001_g_0000v08.pt','u0002_g_0001v14.pt','u0003_g_0002v17.pt','u0004_g_0003v09.pt','u0005_g_0004v16.pt','u0006_g_0005v14.pt','u0007_g_0006v10.pt','u0008_g_0007v11.pt','u0009_g_0008v23.pt','u0010_g_0009v14.pt','u0011_g_0010v07.pt','u0012_g_0011v14.pt','u0013_g_0012v07.pt','u0014_g_0013v01.pt','u0015_g_0014v08.pt','u0016_g_0015v15.pt','u0017_g_0016v08.pt','u0018_g_0017v08.pt','u0019_g_0018v01.pt','u0020_g_0019v08.pt','u0021_g_0020v08.pt','u0022_g_0021v11.pt','u0023_g_0022v13.pt','u0024_g_0023v01.pt','u0025_g_0024v22.pt','u0026_g_0025v14.pt','u0027_g_0026v16.pt','u0028_g_0027v16.pt','u0029_g_0028v07.pt','u0030_g_0029v10.pt','u0031_g_0030v23.pt','u0032_g_0031v09.pt','u0033_g_0032v24.pt','u0034_g_0033v15.pt','u0035_g_0034v19.pt','u0036_g_0035v11.pt','u0037_g_0036v17.pt','u0038_g_0037v13.pt','u0039_g_0038v21.pt','u0040_g_0039v07.pt','u0041_g_0040v01.pt','u0042_g_0041v17.pt','u0043_g_0042v19.pt','u0044_g_0043v23.pt','u0045_g_0044v06.pt','u0046_g_0045v08.pt','u0047_g_0046v24.pt','u0048_g_0047v03.pt','u0049_g_0048v20.pt','u0050_g_0049v08.pt','u0051_g_0050v07.pt','u0052_g_0051v12.pt','u0053_g_0052v18.pt','u0054_g_0053v06.pt','u0055_g_0054v15.pt','u0056_g_0055v13.pt','u0057_g_0056v23.pt','u0058_g_0057v12.pt','u0059_g_0058v05.pt','u0060_g_0059v16.pt','u0061_g_0060v16.pt','u0062_g_0061v11.pt','u0063_g_0062v07.pt','u0064_g_0063v16.pt','u0065_g_0064v14.pt','u0066_g_0065v13.pt','u0067_g_0066v18.pt','u0068_g_0067v02.pt','u0069_g_0068v24.pt','u0070_g_0069v16.pt','u0071_g_0070v10.pt','u0072_g_0071v05.pt','u0073_g_0072v16.pt','u0074_g_0073v12.pt','u0075_g_0074v09.pt','u0076_g_0075v07.pt','u0077_g_0076v12.pt','u0078_g_0077v12.pt','u0079_g_0078v22.pt','u0080_g_0079v23.pt','u0081_g_0080v03.pt','u0082_g_0081v14.pt','u0083_g_0082v03.pt','u0084_g_0083v17.pt','u0085_g_0084v01.pt','u0086_g_0085v11.pt','u0087_g_0086v04.pt','u0088_g_0087v10.pt','u0089_g_0088v18.pt','u0090_g_0089v03.pt','u0091_g_0090v22.pt','u0092_g_0091v11.pt','u0093_g_0092v19.pt','u0094_g_0093v06.pt','u0095_g_0094v10.pt','u0096_g_0095v20.pt','u0097_g_0096v05.pt','u0098_g_0097v20.pt','u0099_g_0098v10.pt','u0100_g_0099v10.pt']
+    # references = ['u0001_g_0000v08.pt','u0002_g_0001v14.pt','u0003_g_0002v17.pt','u0004_g_0003v09.pt','u0005_g_0004v16.pt','u0006_g_0005v14.pt','u0007_g_0006v10.pt','u0008_g_0007v11.pt','u0009_g_0008v23.pt','u0010_g_0009v14.pt','u0011_g_0010v07.pt','u0012_g_0011v14.pt','u0013_g_0012v07.pt','u0014_g_0013v01.pt','u0015_g_0014v08.pt','u0016_g_0015v15.pt','u0017_g_0016v08.pt','u0018_g_0017v08.pt','u0019_g_0018v01.pt','u0020_g_0019v08.pt','u0021_g_0020v08.pt']
+    references = ['u0001_g_0000v08.pt','u0002_g_0001v14.pt','u0003_g_0002v17.pt','u0004_g_0003v09.pt','u0005_g_0004v16.pt','u0006_g_0005v14.pt','u0007_g_0006v10.pt','u0008_g_0007v11.pt','u0009_g_0008v23.pt','u0010_g_0009v14.pt','u0011_g_0010v07.pt','u0012_g_0011v14.pt','u0013_g_0012v07.pt','u0014_g_0013v01.pt','u0015_g_0014v08.pt','u0016_g_0015v15.pt','u0017_g_0016v08.pt','u0018_g_0017v08.pt','u0019_g_0018v01.pt','u0020_g_0019v08.pt','u0021_g_0020v08.pt','u0022_g_0021v11.pt','u0023_g_0022v13.pt','u0024_g_0023v01.pt','u0025_g_0024v22.pt','u0026_g_0025v14.pt','u0027_g_0026v16.pt','u0028_g_0027v16.pt','u0029_g_0028v07.pt','u0030_g_0029v10.pt','u0031_g_0030v23.pt','u0032_g_0031v09.pt','u0033_g_0032v24.pt','u0034_g_0033v15.pt','u0035_g_0034v19.pt','u0036_g_0035v11.pt','u0037_g_0036v17.pt','u0038_g_0037v13.pt','u0039_g_0038v21.pt','u0040_g_0039v07.pt','u0041_g_0040v01.pt','u0042_g_0041v17.pt','u0043_g_0042v19.pt','u0044_g_0043v23.pt','u0045_g_0044v06.pt','u0046_g_0045v08.pt','u0047_g_0046v24.pt','u0048_g_0047v03.pt','u0049_g_0048v20.pt','u0050_g_0049v08.pt','u0051_g_0050v07.pt','u0052_g_0051v12.pt','u0053_g_0052v18.pt','u0054_g_0053v06.pt','u0055_g_0054v15.pt','u0056_g_0055v13.pt','u0057_g_0056v23.pt','u0058_g_0057v12.pt','u0059_g_0058v05.pt','u0060_g_0059v16.pt','u0061_g_0060v16.pt','u0062_g_0061v11.pt','u0063_g_0062v07.pt','u0064_g_0063v16.pt','u0065_g_0064v14.pt','u0066_g_0065v13.pt','u0067_g_0066v18.pt','u0068_g_0067v02.pt','u0069_g_0068v24.pt','u0070_g_0069v16.pt','u0071_g_0070v10.pt','u0072_g_0071v05.pt','u0073_g_0072v16.pt','u0074_g_0073v12.pt','u0075_g_0074v09.pt','u0076_g_0075v07.pt','u0077_g_0076v12.pt','u0078_g_0077v12.pt','u0079_g_0078v22.pt','u0080_g_0079v23.pt','u0081_g_0080v03.pt','u0082_g_0081v14.pt','u0083_g_0082v03.pt','u0084_g_0083v17.pt','u0085_g_0084v01.pt','u0086_g_0085v11.pt','u0087_g_0086v04.pt','u0088_g_0087v10.pt','u0089_g_0088v18.pt','u0090_g_0089v03.pt','u0091_g_0090v22.pt','u0092_g_0091v11.pt','u0093_g_0092v19.pt','u0094_g_0093v06.pt','u0095_g_0094v10.pt','u0096_g_0095v20.pt','u0097_g_0096v05.pt','u0098_g_0097v20.pt','u0099_g_0098v10.pt','u0100_g_0099v10.pt']
     random.shuffle(references)
 
     epoch = []
@@ -420,6 +421,10 @@ for e in tqdm(range(opt.epochs)):
     dists2 = []
     dists3 = []
 
+    disc_loss = []
+    gen_loss = []
+    delt_loss = []
+
     pbar = tqdm(total=(len(epoch)//(opt.batchSize)), position=0, leave=True, desc="Epoch " + str(e))
     # with torch.autograd.set_detect_anomaly(True):
     while epoch != []:
@@ -463,28 +468,30 @@ for e in tqdm(range(opt.epochs)):
         output_fake = netG(noise)
         output = netD(output_fake.detach())
         
-        errD_fake = discriminator_loss(output_real, output_fake)
-        errD_fake.backward(retain_graph=True)
+        errD_fake = discriminator_loss(output_real, output)
+        disc_loss.append(errD_fake.item())
+        errD_fake.backward()
         # errD_fake.backward()
 
-        errD = errD_fake #+ errD_forgeries
+        # errD = errD_fake #+ errD_forgeries
         optimizerD.step()
         
         #Visualize discriminator gradients
-        for name, param in netD.named_parameters():
-            writer.add_histogram("DiscriminatorGradients/{}".format(name), param.grad, niter)
+        # for name, param in netD.named_parameters():
+        #     writer.add_histogram("DiscriminatorGradients/{}".format(name), param.grad, niter)
 
-        del output_real
+        # del output_real
         # del output_forgeries
 
         ############################
         # (2) Update G network: maximize log(D(G(z)))
         ###########################
         netG.zero_grad()
-        output2 = netD(output_fake)
-        output_real2 = netD(real)
+        output_fake = netD(output_fake)
+        output_real2 = netD(real[0].unsqueeze(0))
         
-        errG = discriminator_loss(output_real2[0].unsqueeze(0), output2)
+        errG = discriminator_loss(output_real2, output_fake)
+        gen_loss.append(errG.item())
         # errG = discriminator_loss(torch.cat((output_real[0].unsqueeze(0), output), dim=0), torch.tensor([]))
         errG.backward()
         D_G_z2 = output.mean().item()
@@ -513,6 +520,7 @@ for e in tqdm(range(opt.epochs)):
                     count += 1
             
             delta_loss /= count
+            delt_loss.append(delta_loss.detach().cpu().numpy()[0])
             if delta_loss <= 0:
                 print("Loss menor que 0")
             delta_loss.backward()
@@ -538,8 +546,8 @@ for e in tqdm(range(opt.epochs)):
         # if opt.delta_condition:
         #     writer.add_scalar('MSE of deltas of generated sequences', delta_loss.item(), niter)
         #     print(' DeltaMSE: %.4f' % (delta_loss.item()/opt.delta_lambda), end='')
-        writer.add_scalar('DiscriminatorLoss', errD.item(), niter)
-        writer.add_scalar('GeneratorLoss', errG.item(), niter)
+        # writer.add_scalar('DiscriminatorLoss', errD.item(), niter)
+        # writer.add_scalar('GeneratorLoss', errG.item(), niter)
         # writer.add_scalar('D of X', D_x, niter) 
         # writer.add_scalar('D of G of z', D_G_z1, niter)
         
@@ -586,13 +594,17 @@ for e in tqdm(range(opt.epochs)):
     UPDATED_LOWER_BOUND = '.' + os.sep + "updated_protocol_lower_bound.txt"
     evaluate(UPDATED_LOWER_BOUND, e, result_folder=opt.outf, features_path=dataset_folder, gen=netG)
     MCYT_SKILLED_1VS1 = ".." + os.sep + "Data" + os.sep + "DeepSignDB" + os.sep + "Comparison_Files" + os.sep + "TBIOM_2021_Journal" + os.sep + "stylus" + os.sep + "1vs1" + os.sep + "skilled" + os.sep + "Comp_MCYT_skilled_stylus_1vs1.txt"
-    evaluate(MCYT_SKILLED_1VS1, e, result_folder=opt.outf, features_path=dataset_folder, gen=netG)
     
-    if (e+1) % 5 == 0: evaluate(MCYT_SKILLED_1VS1, e, result_folder=opt.outf, features_path=dataset_folder, gen=netG)
+    if (e+1) % 10 == 0: evaluate(MCYT_SKILLED_1VS1, e, result_folder=opt.outf, features_path=dataset_folder, gen=netG)
     MCYT_RANDOM_1VS1 = ".." + os.sep + "Data" + os.sep + "DeepSignDB" + os.sep + "Comparison_Files" + os.sep + "TBIOM_2021_Journal" + os.sep + "stylus" + os.sep + "1vs1" + os.sep + "random" + os.sep + "Comp_MCYT_random_stylus_1vs1.txt"
-    if (e+1) % 5 == 0: evaluate(MCYT_RANDOM_1VS1, e, result_folder=opt.outf, features_path=dataset_folder, gen=netG)
+    # if (e+1) % 5 == 0: evaluate(MCYT_RANDOM_1VS1, e, result_folder=opt.outf, features_path=dataset_folder, gen=netG)
     
 
     if (e % opt.checkpoint_every == 0) or (e == (opt.epochs - 1)):
         torch.save(netG, '%s/%s_netG_epoch_%d.pth' % (opt.outf, opt.run_tag, e))
         torch.save(netD, '%s/%s_netD_epoch_%d.pth' % (opt.outf, opt.run_tag, e))
+
+    print("\n\n")
+    print("Discriminator Loss:\t\t" + str(np.mean(np.array(disc_loss))))
+    print("Generator Loss....:\t\t" + str(np.mean(np.array(gen_loss))))
+    print("Delta Loss.......:\t\t" + str(np.mean(np.array(delt_loss))))
