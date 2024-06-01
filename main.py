@@ -25,8 +25,8 @@ dtwc = dtw.DTW(True, normalize=False, bandwidth=1)
 sdtw = soft_dtw.SoftDTW(True, gamma=5, normalize=False, bandwidth=0.1)
 sdtw_eval = soft_dtw.SoftDTW(True, gamma=5, normalize=False, bandwidth=1)
 # dataset_folder = os.path.join("..","Resultados", "ROT_X2_", "ROT_X2_005", "generated_features")
-# dataset_folder = os.path.join("..","OVS","Investigation","Extracted Features", "Evaluation")
-dataset_folder = os.path.join("..","OnlineSignatureVerification","Investigation","Extracted Features", "Evaluation")
+dataset_folder = os.path.join("..","OVS","Investigation","Extracted Features", "Evaluation")
+# dataset_folder = os.path.join("..","OnlineSignatureVerification","Investigation","Extracted Features", "Evaluation")
 # dataset_folder = os.path.join("ROT_X2_", "ROT_X2_005", "generated_features")
 training_guide = "training_guide.txt"
 
@@ -431,8 +431,8 @@ for e in tqdm(range(opt.epochs)):
         batch_names, epoch = get_batch(epoch=epoch, batch_size=opt.batchSize)
         data,lens = load_batch(batch_names)
 
-        genuines = data[:10]
-        forgeries = data[25:35]
+        genuines = data[:6]
+        forgeries = data[25:5]
 
         ref = data[0]
 
@@ -448,7 +448,8 @@ for e in tqdm(range(opt.epochs)):
         real = genuines.to(device)
         batch_size, seq_len = real.size(0), real.size(1)
 
-        output_real = netD(real)
+        # output_real = netD(real)
+        output_real = real
 
         # train with skilled forgeries
         # forgeries = forgeries.to(device)
