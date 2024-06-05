@@ -26,7 +26,7 @@ sdtw = soft_dtw.SoftDTW(True, gamma=5, normalize=False, bandwidth=0.1)
 sdtw_eval = soft_dtw.SoftDTW(True, gamma=5, normalize=False, bandwidth=1)
 # dataset_folder = os.path.join("..","Resultados", "ROT_X2_", "ROT_X2_005", "generated_features")
 dataset_folder = os.path.join("..","OVS","Investigation","Extracted Features", "Evaluation")
-# dataset_folder = os.path.join("..","OnlineSignatureVerification","Investigation","Extracted Features", "Evaluation")
+# dataset_folder = os.path.join("..c","OnlineSignatureVerification","Investigation","Extracted Features", "Evaluation")
 # dataset_folder = os.path.join("ROT_X2_", "ROT_X2_005", "generated_features")
 training_guide = "training_guide.txt"
 
@@ -321,7 +321,7 @@ parser.add_argument('--dataset_path', required=False, help='path to dataset')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
 parser.add_argument('--batchSize', type=int, default=50, help='input batch size')
 parser.add_argument('--nz', type=int, default=64, help='dimensionality of the latent vector z')
-parser.add_argument('--epochs', type=int, default=1, help='number of epochs to train for')
+parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train for')
 parser.add_argument('--lr', type=float, default=0.0004, help='learning rate, default=0.0002')
 parser.add_argument('--margin', type=float, default=0.3, help='margin for triplet loss')
 parser.add_argument('--multiplier', type=float, default=2.0, help='multiplier to discriminator loss')
@@ -626,7 +626,7 @@ for e in tqdm(range(opt.epochs)):
         torch.save(netG, '%s/%s_netG_epoch_%d.pth' % (opt.outf, opt.run_tag, e))
         torch.save(netD, '%s/%s_netD_epoch_%d.pth' % (opt.outf, opt.run_tag, e))
 
-    buffer += str(ret1["Global EER"]) + ',' + str(ret1["Mean Local EER"]) + ',' + str(ret1["Global Threshold"]) + ',' + str(ret1['"Local Threshold Variance"']) + ',' + str(ret1["Local Threshold Amplitude"]) + ',' + str(np.mean(np.array(gen_loss))) + ',' + str(np.mean(np.array(delt_loss))) + '\n'
+    buffer += str(ret1["Global EER"]) + ',' + str(ret1["Mean Local EER"]) + ',' + str(ret1["Global Threshold"]) + ',' + str(ret1["Local Threshold Variance"]) + ',' + str(ret1["Local Threshold Amplitude"]) + ',' + str(np.mean(np.array(gen_loss))) + ',' + str(np.mean(np.array(delt_loss))) + '\n'
 
     print("\n\n")
     print("Discriminator Loss:\t\t" + str(np.mean(np.array(disc_loss))))
