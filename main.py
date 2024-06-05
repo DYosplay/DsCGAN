@@ -25,9 +25,9 @@ dtwc = dtw.DTW(True, normalize=False, bandwidth=1)
 sdtw = soft_dtw.SoftDTW(True, gamma=5, normalize=False, bandwidth=0.1)
 sdtw_eval = soft_dtw.SoftDTW(True, gamma=5, normalize=False, bandwidth=1)
 # dataset_folder = os.path.join("..","Resultados", "ROT_X2_", "ROT_X2_005", "generated_features")
-dataset_folder = os.path.join("..","OVS","Investigation","Extracted Features", "Evaluation")
+# dataset_folder = os.path.join("..","OVS","Investigation","Extracted Features", "Evaluation")
 # dataset_folder = os.path.join("..","OnlineSignatureVerification","Investigation","Extracted Features", "Evaluation")
-# dataset_folder = os.path.join("ROT_X2_", "ROT_X2_005", "generated_features")
+dataset_folder = os.path.join("ROT_X2_", "ROT_X2_005", "generated_features")
 training_guide = "training_guide.txt"
 
 def dtr(x, y, len_x, len_y):
@@ -76,7 +76,7 @@ def get_eer(y_true, y_scores, result_folder : str = None, generate_graph : bool 
     return eer, eer_threshold
 
 import math
-def inference(files : str, gen, features_path : str):
+def inference(files : str, features_path : str):
     """ Calcula score de dissimilaridade entre um grupo de assinaturas
 
     Args:
@@ -124,12 +124,13 @@ def inference(files : str, gen, features_path : str):
         for i in range(0,len(refs)):
             x = load_tensor(refs[i].split('.')[0] + '.pt', features_path).cuda()
 
-            noise = torch.randn(opt.batchSize, seq_len, nz, device=device)
-            deltas = ref.repeat(opt.batchSize,1,1)
+            noise = torch.randn(opt.batchSize, x.shape[0], nz, device=device)
+            deltas = x.repeat(opt.batchSize,1,1)
             noise = torch.cat((noise, deltas), dim=2)
 
             #Generate sequence given noise w/ deltas and deltas
             out_seqs = netG(noise)
+            # out_seqs = netD(out_seqs)
             x = out_seqs[0]
 
             dists_query.append(dtr_eval(x, query, x.shape[0], query.shape[0]).detach().cpu())
@@ -154,7 +155,7 @@ def inference(files : str, gen, features_path : str):
 
     return (s_avg + s_min), user_key, result
 
-def evaluate(comparison_file : str, n_epoch : int, result_folder : str, features_path : str, gen):
+def evaluate(comparison_file : str, n_epoch : int, result_folder : str, features_path : str):
     """ Avaliação da rede conforme o arquivo de comparação
 
     Args:
@@ -177,7 +178,7 @@ def evaluate(comparison_file : str, n_epoch : int, result_folder : str, features
     users = {}
 
     for line in tqdm(lines, "Calculando distâncias..."):
-        distance, user_id, true_label = inference(line, gen, features_path=features_path)
+        distance, user_id, true_label = inference(line, features_path=features_path)
         
         if user_id not in users: 
             users[user_id] = {"distances": [distance], "true_label": [true_label], "predicted_label": []}
@@ -296,15 +297,25 @@ def discriminator_loss(real, fake, th=torch.tensor(0.14373250305652618)):
     anchor = real[0]
     pos_loss = 0
     neg_loss = 0
+    pos_count = 0
+    neg_count = 0
     for r in real[1:]:
-        pos_loss += F.relu(dtr_eval(anchor, r, anchor.shape[0], r.shape[0]) - th)
+        v = F.relu(dtr_eval(anchor, r, anchor.shape[0], r.shape[0])*opt.multiplier - th)
+        pos_loss += v
+        if v > 0: pos_count += 1
     for f in fake:
-        neg_loss += F.relu(th - dtr_eval(anchor, f, anchor.shape[0], f.shape[0]))
+        v = F.relu(th - dtr_eval(anchor, f, anchor.shape[0], f.shape[0])*opt.multiplier)
+        neg_loss += v
+        if v > 0: neg_count += 1
 
-    return pos_loss + neg_loss
+    pos_count = max(pos_count, 1)
+    neg_count = max(neg_count, 1)
+    return (pos_loss) + (neg_loss)
+    return (pos_loss/pos_count) + (neg_loss/neg_count)
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--test_name', type=str, help='test name')
 parser.add_argument('--dataset', default="btp", help='dataset to use (only btp for now)')
 parser.add_argument('--dataset_path', required=False, help='path to dataset')
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
@@ -312,6 +323,8 @@ parser.add_argument('--batchSize', type=int, default=50, help='input batch size'
 parser.add_argument('--nz', type=int, default=64, help='dimensionality of the latent vector z')
 parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train for')
 parser.add_argument('--lr', type=float, default=0.0002, help='learning rate, default=0.0002')
+parser.add_argument('--margin', type=float, default=0.3, help='margin for triplet loss')
+parser.add_argument('--multiplier', type=float, default=2.0, help='multiplier to discriminator loss')
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--netG', default='', help="path to netG (to continue training)")
 parser.add_argument('--netD', default='', help="path to netD (to continue training)")
@@ -377,7 +390,7 @@ if opt.dis_type == "cnn":
 if opt.gen_type == "lstm":
     netG = LSTMGenerator(in_dim=in_dim, out_dim=64, hidden_dim=256).to(device)
 if opt.gen_type == "cnn":
-    netG = CausalConvGenerator(noise_size=in_dim, output_size=1, n_layers=8, n_channel=10, kernel_size=8, dropout=0.2).to(device)
+    netG = CausalConvGenerator(noise_size=in_dim, output_size=64, n_layers=8, n_channel=10, kernel_size=8, dropout=0.2).to(device)
     
 assert netG
 assert netD
@@ -408,6 +421,7 @@ fake_label = 0
 optimizerD = optim.Adam(netD.parameters(), lr=opt.lr)
 optimizerG = optim.Adam(netG.parameters(), lr=opt.lr)
 
+buffer = 'Global EER, Mean Local EER, Global Threshold, Local Threshold Variance, Local Threshold Amplitude, Generator Loss, Delta Loss\n'
 for e in tqdm(range(opt.epochs)):
     bla = True
     refm = None
@@ -432,7 +446,8 @@ for e in tqdm(range(opt.epochs)):
         data,lens = load_batch(batch_names)
 
         genuines = data[:6]
-        forgeries = data[25:5]
+        forgeries = data[25:30]
+        len_f = lens[25:30]
 
         ref = data[0]
 
@@ -460,22 +475,23 @@ for e in tqdm(range(opt.epochs)):
         # errD_forgeries.backward(retain_graph=True)
 
         #Train with fake data
-        noise = torch.randn(batch_size, seq_len, nz, device=device)
+        num_syn = 5
+        noise = torch.randn(num_syn, seq_len, nz, device=device)
         if opt.delta_condition:
             #Sample a delta for each batch and concatenate to the noise for each timestep
-            deltas = ref.repeat(batch_size,1,1)
+            deltas = ref.repeat(num_syn,1,1)
             noise = torch.cat((noise, deltas), dim=2)
-
+# 
         output_fake = netG(noise)
-        output = netD(output_fake.detach())
+        # output = netD(output_fake.detach())
         
-        errD_fake = discriminator_loss(output_real, output)
-        disc_loss.append(errD_fake.item())
-        errD_fake.backward()
+        # errD_fake = discriminator_loss(output_real, output)
+        # disc_loss.append(errD_fake.item())
         # errD_fake.backward()
+        # # errD_fake.backward()
 
-        # errD = errD_fake #+ errD_forgeries
-        optimizerD.step()
+        # # errD = errD_fake #+ errD_forgeries
+        # optimizerD.step()
         
         #Visualize discriminator gradients
         # for name, param in netD.named_parameters():
@@ -485,53 +501,57 @@ for e in tqdm(range(opt.epochs)):
         # del output_forgeries
 
         ############################
-        # (2) Update G network: maximize log(D(G(z)))
+        # (2) Update G Dnetwork: maximize log(D(G(z)))
         ###########################
         netG.zero_grad()
-        output_fake = netD(output_fake)
-        output_real2 = netD(real[0].unsqueeze(0))
+        # output_fake = netD(output_fake)
+        # output_real2 = netD(real[0].unsqueeze(0))
+        output_real2 = real[0].unsqueeze(0)
         
         # errG = discriminator_loss(output_real2, output_fake)
         errG = discriminator_loss(torch.cat((output_real2, output_fake), dim=0), torch.tensor([]))
         gen_loss.append(errG.item())
-        errG.backward()
-        D_G_z2 = output.mean().item()
+        errG.backward(retain_graph=True)
+        # D_G_z2 = output.mean().item()
         i+=1
 
         if opt.delta_condition:
             #If option is passed, alternate between the losses instead of using their sum
-            if opt.alternate:
-                optimizerG.step()
-                netG.zero_grad()
+            # if opt.alternate:
+                # optimizerG.step()
+                # netG.zero_grad()
 
-            num_syn = 1
-            noise = torch.randn(num_syn, seq_len, nz, device=device)
-            deltas = ref.repeat(num_syn,1,1)
-            noise = torch.cat((noise, deltas), dim=2)
-            out_seqs = netG(noise)
+            # num_syn = 5
+            # noise = torch.randn(num_syn, seq_len, nz, device=device)
+            # deltas = ref.repeat(num_syn,1,1)
+            # noise = torch.cat((noise, deltas), dim=2)
+            # out_seqs = netG(noise)
             delta_loss = 0
 
             count = 0
-            for syn in out_seqs:
+            for syn in output_fake:
                 # for index, sig in enumerate(genuines[1:]):
                 #     delta_loss += F.relu(dtr(syn, deltas[0], syn.shape[0], lens[0]) + 1 - dtr(sig, syn, lens[index], syn.shape[0]))
                 #     count += 1
-                for index, sig in enumerate(forgeries[1:]):
-                    delta_loss += F.relu(dtr(syn, deltas[0], syn.shape[0], lens[0]) + 1 - dtr(sig, syn, lens[index], syn.shape[0]))
+                for index, sig in enumerate(forgeries):
+                    delta_loss += F.relu(dtr_eval(syn, ref, lens[0], lens[0]) + opt.margin - dtr_eval(sig, syn, len_f[index], lens[0]))
                     count += 1
             
             delta_loss /= count
+            delta_loss.backward()
             delt_loss.append(delta_loss.detach().cpu().numpy()[0])
             if delta_loss <= 0:
                 print("Loss menor que 0")
-            delta_loss.backward()
-        
+            
         if bla: 
             refm = output_fake[0]
             bla = False
-
+        if errG > 0:
+            print("catch")
+        # if errD_fake > 0:
+        #     print("catch")
         optimizerG.step()
-        
+        optimizerD.step()
         #Visualize generator gradients
         for name, param in netG.named_parameters():
             writer.add_histogram("GeneratorGradients/{}".format(name), param.grad, niter)
@@ -551,16 +571,17 @@ for e in tqdm(range(opt.epochs)):
         # writer.add_scalar('GeneratorLoss', errG.item(), niter)
         # writer.add_scalar('D of X', D_x, niter) 
         # writer.add_scalar('D of G of z', D_G_z1, niter)
-        
+
+
         with torch.no_grad():
-            res = dte(ref, output_fake[0], lens[0], lens[0]) * 2
+            res = dtr_eval(ref, output_fake[0], lens[0], lens[0]) * 2
             dists.append(batch_names[0] + ':\t\t' + str(res))
 
-            res2 = dte(refm, ref, lens[0], lens[0]) * 2
+            res2 = dtr_eval(refm, ref, lens[0], lens[0]) * 2
             dists2.append(batch_names[0] + ':\t\t' + str(res2))
 
             v = random.randint(1,24)
-            res3 = dte(data[v], output_fake[0], lens[v], lens[0]) * 2
+            res3 = dtr_eval(data[v], output_fake[0], lens[v], lens[0]) * 2
             dists3.append(batch_names[0] + ':\t\t' + str(res3))
         pbar.update(1)
         # break #!!!
@@ -593,19 +614,24 @@ for e in tqdm(range(opt.epochs)):
         print(s)
 
     UPDATED_LOWER_BOUND = '.' + os.sep + "updated_protocol_lower_bound.txt"
-    evaluate(UPDATED_LOWER_BOUND, e, result_folder=opt.outf, features_path=dataset_folder, gen=netG)
     MCYT_SKILLED_1VS1 = ".." + os.sep + "Data" + os.sep + "DeepSignDB" + os.sep + "Comparison_Files" + os.sep + "TBIOM_2021_Journal" + os.sep + "stylus" + os.sep + "1vs1" + os.sep + "skilled" + os.sep + "Comp_MCYT_skilled_stylus_1vs1.txt"
     
-    if (e+1) % 10 == 0: evaluate(MCYT_SKILLED_1VS1, e, result_folder=opt.outf, features_path=dataset_folder, gen=netG)
+    if (e+1) % 1 == 0: ret1 = evaluate(MCYT_SKILLED_1VS1, e, result_folder=opt.outf, features_path=dataset_folder)
     MCYT_RANDOM_1VS1 = ".." + os.sep + "Data" + os.sep + "DeepSignDB" + os.sep + "Comparison_Files" + os.sep + "TBIOM_2021_Journal" + os.sep + "stylus" + os.sep + "1vs1" + os.sep + "random" + os.sep + "Comp_MCYT_random_stylus_1vs1.txt"
     # if (e+1) % 5 == 0: evaluate(MCYT_RANDOM_1VS1, e, result_folder=opt.outf, features_path=dataset_folder, gen=netG)
+    if (e+1) % 1 == 0: ret2 = evaluate(UPDATED_LOWER_BOUND, e, result_folder=opt.outf, features_path=dataset_folder)
     
 
     if (e % opt.checkpoint_every == 0) or (e == (opt.epochs - 1)):
         torch.save(netG, '%s/%s_netG_epoch_%d.pth' % (opt.outf, opt.run_tag, e))
         torch.save(netD, '%s/%s_netD_epoch_%d.pth' % (opt.outf, opt.run_tag, e))
 
+    buffer += ret1["Global EER"] + ',' + ret1["Mean Local EER"] + ',' + ret1["Global Threshold"] + ',' + ret1['"Local Threshold Variance"'] + ',' + ret1["Local Threshold Amplitude"] + ',' + str(np.mean(np.array(gen_loss))) + ',' + str(np.mean(np.array(delt_loss))) + '\n'
+
     print("\n\n")
     print("Discriminator Loss:\t\t" + str(np.mean(np.array(disc_loss))))
     print("Generator Loss....:\t\t" + str(np.mean(np.array(gen_loss))))
     print("Delta Loss.......:\t\t" + str(np.mean(np.array(delt_loss))))
+
+with open("summary_" + opt.test_name + ".csv", "w") as fw:
+    fw.write(buffer)
